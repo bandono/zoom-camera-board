@@ -1,7 +1,7 @@
 #!/bin/bash
 # Requires root privilege as this script needs to put up/down
 # or restart network and/or pptp
-# version : 2.4
+# version : 2.5
 #
 # A lock file will be created as `/usr/local/ipcam/tmp/conn-health.lock`
 # if the script doesn't finished, this needs manual removal
@@ -21,9 +21,11 @@
 # The camera will use 3G Modem stick by default
 # and this script are doing:
 # 	1. Check whether USB modem is connected to internet (ISP)
-#	2. Try to connect to ISP via USB modem
+#	2. Check whether USB modem is answering AT command using `check_usb_modem.py`
+#	   and then try to connect to ISP via USB modem
 #	3. Create VPN to PPTP server once modem is connected
-#	4. Log necessary action via logger 
+#	4. Log necessary action via logger
+#	5. Update date calling `scriptBin/ntpdate start` 
 #
 # REBOOT:
 # 1. this script may reboot system if several VPN attempts are not success
@@ -47,6 +49,9 @@ defWlanGw=192.168.1.1
 
 unset stickStatus
 unset wlanGw
+
+pppDir="/etc/ppp/peers"
+ATchecker=$scriptBin/check_usb_modem.py
 
 wifiRoute() {
 	route add default gw $wlanGw dev ${ifWlan}
@@ -88,19 +93,31 @@ else
 		while [ $pppStatus -gt 0 ]; do
 			rm $tempFile
 			defaultISP=`grep defaultISP $varsFile | awk -F'=' '{print $2}'`
-			# initiate modem connection:
-			pppd call $defaultISP
-			echo "[conn-health]: Starting pppd $defaultISP"
-			logger "Starting pppd $defaultISP" -t "[conn-health]"
-			sleep 10
-			# get new modem interface status after waiting 10 seconds
-			ifconfig $ifPpp > $tempFile 2>&1
-			pppStatus=`cat $tempFile | head -1 | grep error | wc -l`
-			# restart pptp-client after getting new status
-			#if any, if there isn't, make no noise about it
-			poff $VPNname > /dev/null 2>&1
-			sleep 4
-			pon $VPNname
+			pppConf="$pppDir/$defaultISP"
+			ttyName=`cat $pppConf | grep tty | head -1`
+			ttyStatus=`/usr/bin/python $ATchecker $ttyName | grep "OK" | wc -l`
+			# if AT command is replied with OK then initiate modem connection
+			if [ $ttyStatus -gt 0 ];then
+				pppd call $defaultISP
+				echo "[conn-health]: Starting pppd $defaultISP"
+				logger "Starting pppd $defaultISP" -t "[conn-health]"
+				sleep 10
+				# get new modem interface status after waiting 10 seconds
+				ifconfig $ifPpp > $tempFile 2>&1
+				pppStatus=`cat $tempFile | head -1 | grep error | wc -l`
+				# restart pptp-client after getting new status
+				#if any, if there isn't, make no noise about it
+				$scriptBin/ntpdate start	#update date via ntpdate
+				poff $VPNname > /dev/null 2>&1
+				sleep 4
+				pon $VPNname
+			else
+				echo "[conn-health]: AT command failed. Removing lock"
+				logger "AT command failed. Removing lock" -t "[conn-health]"
+				rm $tempFile
+				rm $lockFile
+				exit 1
+			fi	
 		done
 		rm $tempFile
 
