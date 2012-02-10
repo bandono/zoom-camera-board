@@ -1,0 +1,22 @@
+#!/bin/bash
+# version: 1.0
+# to be placed @reboot of crontab
+# requires root privilege (@reboot sudo ./clean-lock-temp)
+# Clean the following files
+# 1. `conn-health-lock`
+# 2. *.tmp
+
+scriptDir="/usr/local/ipcam"
+tempDir=$scriptDir/tmp
+lockFile="$tempDir/conn-health.lock"
+
+
+if [ -f $lockFile ]; then
+	rm -f $lockFile
+	echo "[clean-lock-temp]: removed conn-health.lock"
+	logger "removed conn-health.lock" -t "[clean-lock-temp]"	
+fi
+rm -f $tempDir/*.tmp
+echo "[clean-lock-temp]: removed *.tmp"
+logger "removed *.tmp" -t "[clean-lock-temp]"
+exit 0
