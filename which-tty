@@ -1,5 +1,5 @@
 #!/bin/bash
-# version: 3.0
+# version: 3.1
 # For use with the direct camera RS232 connection without additional control board 
 # 1. Read `vars` file inside $scriptBin (inside /usr/local/ipcam/bin)
 # 2. Check modem by calling `check_usb_modem.py` script
@@ -7,7 +7,9 @@
 #
 # run under root privilege
 # it has start/stop where the stop is dummy to be placed in various level of rc*.d init
-# 4. via start/stop at startup it also delete `conn-health` lock file and `.tmp` files
+# 4. log necessary info
+# `all_down` is a dummy function doing nothing just for the script to be able to be called:
+# `which-tty stop`
 
 
 scriptDir="/usr/local/ipcam"
@@ -44,10 +46,12 @@ modify_ISPconfig() {
 	pppConf="$pppDir/$modemISP"
 	if [ ! -f $pppConf ]; then
 		echo "[which-tty-modem]: modem ISP config not found"
+		logger "modem ISP config not found" -t "[which-tty-modem]"
 	else
 		ttyInd=`echo -n $1 | cut -c12`
 		/usr/bin/perl -pi -e "s/\/dev\/ttyUSB.*/\/dev\/ttyUSB${ttyInd}/g" $pppConf
-		echo "[which-tty-modem]: modified USB modem to $1" 
+		echo "[which-tty-modem]: modified USB modem to $1"
+		logger "modified USB modem to $1" -t "[which-tty-modem]"		 
 	fi
 } 
 
@@ -57,15 +61,12 @@ whichmodem_up() {
 		modify_ISPconfig $ttyUSB
 	else
 		echo "[which-tty-modem]: No ttyUSB* answer ATZ modem command"
+		logger "No ttyUSB* answer ATZ modem command" -t "[which-tty-modem]"
 	fi	
 }
 
 all_down() {
-	# delete `conn-health` lock file if found
-	if [ -f $lockFile ]; then	
-		rm -f $lockFile
-	fi
-	rm -f $tempDir/*.tmp
+	true
 }
 
 case "$1" in
@@ -76,11 +77,6 @@ start)
 	else
 		modemISP=$defaultISP
 	fi
-	# delete `conn-health` lock file if found
-	if [ -f $lockFile ]; then	
-		rm -f $lockFile
-	fi
-	rm -f $tempDir/*.tmp
 	whichmodem_up
 	;;
 stop)
