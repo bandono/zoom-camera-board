@@ -1,7 +1,7 @@
 #!/bin/bash
 # Requires root privilege as this script needs to put up/down
 # or restart network and/or pptp
-# version : 2.3
+# version : 2.4
 #
 # A lock file will be created as `/usr/local/ipcam/tmp/conn-health.lock`
 # if the script doesn't finished, this needs manual removal
@@ -23,6 +23,7 @@
 # 	1. Check whether USB modem is connected to internet (ISP)
 #	2. Try to connect to ISP via USB modem
 #	3. Create VPN to PPTP server once modem is connected
+#	4. Log necessary action via logger 
 #
 # REBOOT:
 # 1. this script may reboot system if several VPN attempts are not success
@@ -55,6 +56,7 @@ wifiRoute() {
 	poff $VPNname > /dev/null 2>&1
 	sleep 4
 	echo "[conn-health]: attempting VPN via WiFi"
+	logger "attempting VPN via WiFi" -t "[conn-health]"
 	pon $VPNname
 }
 
@@ -64,11 +66,13 @@ VPNname=`grep VPNname $varsFile | awk -F'=' '{print $2}'`
 # check whether another connection health check is running
 if [ -f $lockFile ]; then
 	echo "[conn-health]: Other connection health check is still running"
+	logger "Other connection health check is still running" -t "[conn-health]"
 	exit 0
 else
 	# Creating lockfile
 	echo 1 > $lockFile
 	echo "[conn-health]: Connection health conn-health.lock is created"
+	logger "Connection health conn-health.lock is created" -t "[conn-health]"
 	
 	# branch to use WiFi and delete other default gateway route
 	stickStatus=`$scriptBin/wifi-stick | grep no\ USB\ WiFi\ found`
@@ -87,6 +91,7 @@ else
 			# initiate modem connection:
 			pppd call $defaultISP
 			echo "[conn-health]: Starting pppd $defaultISP"
+			logger "Starting pppd $defaultISP" -t "[conn-health]"
 			sleep 10
 			# get new modem interface status after waiting 10 seconds
 			ifconfig $ifPpp > $tempFile 2>&1
@@ -119,13 +124,15 @@ else
 			vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
 			# update counter (decrement)
 			(( vpnCounter-- ))
+			echo "[conn-health]: attempt to connect VPN : $vpnCounter"
+			logger "attempt to connect VPN : $vpnCounter" -t "[conn-health]"			
 		done
 
 		
 		# the checking before reboot decision
 		ifconfig $ifVpn > $tempFile 2>&1
 		vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
-		if [ $vpnStatus -gt 0 ]; then
+		if [ $vpnStatus -gt 0 ]; then		
 			# REBOOT
 			rm $tempFile
 			rm $lockFile
@@ -158,6 +165,7 @@ else
 			wifiRoute
 		elif [ "$defGw" == "$ifWlan" ]; then
 			echo "[conn-health]: already defaulting to WiFi"
+			logger "already defaulting to WiFi" -t "[conn-health]"
 		else
 			wifiRoute
 		fi
@@ -165,4 +173,5 @@ else
 fi
 rm $lockFile
 echo "[conn-health]: Connection health conn-health.lock is removed"
+logger "Connection health conn-health.lock is removed" -t "[conn-health]"
 exit 0
