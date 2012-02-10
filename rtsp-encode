@@ -1,0 +1,38 @@
+#!/bin/bash
+
+scriptDir="/usr/local/ipcam"
+scriptBin=$scriptDir/bin
+tempDir=$scriptDir/tmp
+pidFile="$tempDir/run-cvlc.pid"
+varsFile=$scriptBin/vars
+
+# read video scaling constant configuration from `vars`
+videoScale=`grep videoScale $varsFile | awk -F'=' '{print $2}'`
+
+# choose whether to simply use /dev/video0 or look for /dev/video1
+# by checking wether any exist:
+if [ -c /dev/video0 ]; then
+	videoDevAddr=/dev/video0
+elif [ -c /dev/video1 ]; then
+	videoDevAddr=/dev/video1
+fi
+
+# running vlc to capture the video if /dev/video* exists from the above search
+if [ "$videoDevAddr" != "" ]; then
+	if [ ! "$(pidof vlc)" ]; then
+		if [ -f $pidFile ]; then
+			rm $pidFile
+		fi
+		/usr/bin/cvlc -v v4l2://$videoDevAddr \
+		--sout "#transcode{vcodec=mp4v,vb=800,scale=${videoScale}}:rtp{dst=127.0.0.1,port=1234,sdp=rtsp://0.0.0.0:3434/test.sdp}" &
+		echo $! > $pidFile
+	else
+		echo "[cvlc]: VLC already running"
+	fi
+else
+	echo "[cvlc]: No /dev/video (0 or 1) found"
+	# REBOOT board !!!
+	sudo reboot
+fi	
+
+exit 0

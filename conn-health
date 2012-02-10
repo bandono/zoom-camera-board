@@ -1,0 +1,168 @@
+#!/bin/bash
+# Requires root privilege as this script needs to put up/down
+# or restart network and/or pptp
+# version : 2.3
+#
+# A lock file will be created as `/usr/local/ipcam/tmp/conn-health.lock`
+# if the script doesn't finished, this needs manual removal
+# or reboot (will be done by `which-tty`)
+#
+# EMERGENCY OPERATION:
+# The health-check will detect whether USB WiFi stick is plugged in
+# Using this WiFi (wireless LAN) will put down other network connections
+# and set this wireless connection as default route
+#
+# The above is done by calling another script: `wifi-stick`
+#
+# It then attempts to create VPN connection via this route
+# It modifies DNS to use OpenDNS
+#
+# NORMAL OPERATION: 
+# The camera will use 3G Modem stick by default
+# and this script are doing:
+# 	1. Check whether USB modem is connected to internet (ISP)
+#	2. Try to connect to ISP via USB modem
+#	3. Create VPN to PPTP server once modem is connected
+#
+# REBOOT:
+# 1. this script may reboot system if several VPN attempts are not success
+# 2. However reboot is cancelled if WiFi stick is plugged
+#
+# will try to read `vars` for this settings:
+# 1. VPNname
+# 2. defaultISP
+# 3. wlanGw 
+
+scriptDir="/usr/local/ipcam"
+scriptBin=$scriptDir/bin
+tempDir=$scriptDir/tmp
+tempFile="$tempDir/`date +%H-%M`-ifstatus.tmp"
+lockFile="$tempDir/conn-health.lock"
+varsFile=$scriptBin/vars
+ifPpp=ppp0
+ifVpn=ppp1
+ifWlan=wlan0
+defWlanGw=192.168.1.1
+
+unset stickStatus
+unset wlanGw
+
+wifiRoute() {
+	route add default gw $wlanGw dev ${ifWlan}
+	# use OpenDNS name servers for DNS configuration
+	echo -e "nameserver 208.67.222.222\nnameserver 208.67.220.220" > /etc/resolv.conf
+	# try to stop VPN if any, if there isn't, make no noise about it
+	poff $VPNname > /dev/null 2>&1
+	sleep 4
+	echo "[conn-health]: attempting VPN via WiFi"
+	pon $VPNname
+}
+
+# read pptp VPN name from `vars`
+VPNname=`grep VPNname $varsFile | awk -F'=' '{print $2}'`
+
+# check whether another connection health check is running
+if [ -f $lockFile ]; then
+	echo "[conn-health]: Other connection health check is still running"
+	exit 0
+else
+	# Creating lockfile
+	echo 1 > $lockFile
+	echo "[conn-health]: Connection health conn-health.lock is created"
+	
+	# branch to use WiFi and delete other default gateway route
+	stickStatus=`$scriptBin/wifi-stick | grep no\ USB\ WiFi\ found`
+	if [ "$stickStatus" != "" ]; then
+		
+		#--------------------
+		# look for interface via ifconfig
+		# non-exist interface will return "ppp0: error fetching interface information: Device not found"
+		ifconfig $ifPpp > $tempFile 2>&1
+		pppStatus=`cat $tempFile | head -1 | grep error | wc -l`
+		
+		# loop while found any single line stating error
+		while [ $pppStatus -gt 0 ]; do
+			rm $tempFile
+			defaultISP=`grep defaultISP $varsFile | awk -F'=' '{print $2}'`
+			# initiate modem connection:
+			pppd call $defaultISP
+			echo "[conn-health]: Starting pppd $defaultISP"
+			sleep 10
+			# get new modem interface status after waiting 10 seconds
+			ifconfig $ifPpp > $tempFile 2>&1
+			pppStatus=`cat $tempFile | head -1 | grep error | wc -l`
+			# restart pptp-client after getting new status
+			#if any, if there isn't, make no noise about it
+			poff $VPNname > /dev/null 2>&1
+			sleep 4
+			pon $VPNname
+		done
+		rm $tempFile
+
+		sleep 5
+		# check vpn tunnel after 5 seconds (as connection attempt already done once within the above loop)
+
+		# if connection can't be established in one more attempt
+		# try four times more before rebooting
+		ifconfig $ifVpn > $tempFile 2>&1
+		vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
+		
+		vpnCounter=5
+		while [ $vpnCounter -gt 0 ] && [ $vpnStatus -gt 0 ]; do
+			# try to stop VPN if any, if there isn't, make no noise about it
+			poff $VPNname > /dev/null 2>&1
+			sleep 4
+			pon $VPNname
+			
+			# update VPN status
+			ifconfig $ifVpn > $tempFile 2>&1
+			vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
+			# update counter (decrement)
+			(( vpnCounter-- ))
+		done
+
+		
+		# the checking before reboot decision
+		ifconfig $ifVpn > $tempFile 2>&1
+		vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
+		if [ $vpnStatus -gt 0 ]; then
+			# REBOOT
+			rm $tempFile
+			rm $lockFile
+			reboot
+		fi
+		#--------------------		
+		rm $tempFile		
+	else
+		# try to stop VPN if any, if there isn't, make no noise about it
+		poff $VPNname > /dev/null 2>&1
+		
+		# read WLAN gateway config from `vars`
+		wlanGw=`grep wlanGw $varsFile | awk -F'=' '{print $2}'`
+		if [ "$wlanGw" == "" ]; then
+			wlanGw=$defWlanGw
+		fi
+
+		# put down eth0		
+		# change default route
+		# change DNS resolver
+		
+		ifconfig eth0 down
+		defGw=`route | grep default | awk '{print $8}'`
+		
+		if [ "$defGw" == "ppp0" ]; then
+			route del default gw 0.0.0.0 dev ppp0
+			wifiRoute
+		elif [ "$defGw" == "eth0" ]; then
+			route del default gw 0.0.0.0 dev eth0
+			wifiRoute
+		elif [ "$defGw" == "$ifWlan" ]; then
+			echo "[conn-health]: already defaulting to WiFi"
+		else
+			wifiRoute
+		fi
+	fi
+fi
+rm $lockFile
+echo "[conn-health]: Connection health conn-health.lock is removed"
+exit 0

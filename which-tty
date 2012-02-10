@@ -1,0 +1,93 @@
+#!/bin/bash
+# version: 3.0
+# For use with the direct camera RS232 connection without additional control board 
+# 1. Read `vars` file inside $scriptBin (inside /usr/local/ipcam/bin)
+# 2. Check modem by calling `check_usb_modem.py` script
+# 3. Modify /etc/ppp/peers/$modemISP according to the above checking of /dev/ttyUSB*
+#
+# run under root privilege
+# it has start/stop where the stop is dummy to be placed in various level of rc*.d init
+# 4. via start/stop at startup it also delete `conn-health` lock file and `.tmp` files
+
+
+scriptDir="/usr/local/ipcam"
+scriptBin=$scriptDir/bin
+
+tempDir=$scriptDir/tmp
+tempFile="$tempDir/`date +%H-%M`-ttyUSB.lst"
+lockFile="$tempDir/conn-health.lock"
+varsFile=$scriptBin/vars
+pppDir="/etc/ppp/peers"
+
+
+ATchecker=$scriptBin/check_usb_modem.py
+
+defaultISP=`grep defaultISP $varsFile | awk -F'=' '{print $2}'`
+modemISP=$defaultISP
+
+which_usb() {
+	ls  /dev/ttyUSB* | tr '\s' '\n' > $tempFile
+	
+	# check each ttyUSB? found in file by calling `check_usb_modem.py`
+	for ttyname in `cat $tempFile`
+	do
+		ttyStatus=`/usr/bin/python $ATchecker $ttyname | grep "OK"`
+		if [ "$ttyStatus" != "" ]; then
+			ttyUSB=$ttyname 
+			break
+		fi
+	done
+	rm $tempFile
+}
+
+modify_ISPconfig() {
+	pppConf="$pppDir/$modemISP"
+	if [ ! -f $pppConf ]; then
+		echo "[which-tty-modem]: modem ISP config not found"
+	else
+		ttyInd=`echo -n $1 | cut -c12`
+		/usr/bin/perl -pi -e "s/\/dev\/ttyUSB.*/\/dev\/ttyUSB${ttyInd}/g" $pppConf
+		echo "[which-tty-modem]: modified USB modem to $1" 
+	fi
+} 
+
+whichmodem_up() {
+	which_usb $ttyUSB
+	if [ "$ttyUSB" != "" ]; then
+		modify_ISPconfig $ttyUSB
+	else
+		echo "[which-tty-modem]: No ttyUSB* answer ATZ modem command"
+	fi	
+}
+
+all_down() {
+	# delete `conn-health` lock file if found
+	if [ -f $lockFile ]; then	
+		rm -f $lockFile
+	fi
+	rm -f $tempDir/*.tmp
+}
+
+case "$1" in
+ 
+start)
+	if [ "$2" != "" ]; then
+		modemISP=$2
+	else
+		modemISP=$defaultISP
+	fi
+	# delete `conn-health` lock file if found
+	if [ -f $lockFile ]; then	
+		rm -f $lockFile
+	fi
+	rm -f $tempDir/*.tmp
+	whichmodem_up
+	;;
+stop)
+	all_down
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	;;
+esac
+exit 0

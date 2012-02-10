@@ -1,0 +1,52 @@
+#!/bin/bash
+
+scriptDir="/usr/local/ipcam"
+# use the compiled ffmpeg in /usr/local/bin
+FFMPEG="/usr/local/bin/ffmpeg"
+
+tempDir=$scriptDir/tmp
+defaultPort=3434
+
+# ------------------------
+# checking argument passed
+if [ "$1" != "" ]; then
+	dstIP=$1
+else
+	echo "Usage: ./rtmp-encode <rtsp server/camera IP> <optional port>"
+	exit 1
+fi
+
+if [ "$2" != "" ]; then
+	dstPort=$2
+else
+	dstPort=$defaultPort
+fi
+# ------------------------
+
+
+# create stream name using last part of IPv4 address
+streamName=stream`echo $dstIP | awk -F'.' '{print $4}'`
+pidFile="$tempDir/run-ffmpeg-$streamName.pid"
+
+# check whether rtsp port given is in open state
+portStatus=`/usr/bin/nmap -p$dstPort $dstIP | grep "tcp" | awk '{print $2}'`
+
+# start ffmpeg to restream the rtsp if port is open
+if [ $portStatus != "closed" ]; then
+	# don't start ffmpeg if it is already started
+	ffmpegStatus=`ps -ef | grep $streamName | grep -v grep | awk '{print $2}'`	
+	if [ "$ffmpegStatus" == "" ]; then
+		if [ -f $pidFile ]; then
+			rm $pidFile
+		fi
+		$FFMPEG -i rtsp://$dstIP:$dstPort/test.sdp -re -strict experimental -vcodec libx264 -vpre medium -f flv rtmp://127.0.0.1/live/$streamName > $tempDir/ffmpeg-$streamName.log 2>&1
+		pidof $FFMPEG > $pidFile
+	else
+		echo "[ffmpeg - $streamName ]: ffmpeg for that RTMP stream already exist"
+		exit 0
+	fi
+else
+	echo "[ffmpeg - $streamName ]: RTSP source port isn't available/reachable"
+	exit 1
+fi
+exit 0

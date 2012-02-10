@@ -1,0 +1,82 @@
+#!/bin/bash
+# Requires root privilege as this script needs to put up/down
+# wpa_supplicant and ifconfig
+#
+# It will use `lsusb` to check for WiFi (wireless-LAN) stick
+#
+# will try to read `vars` for this settings:
+# 1. stickVendId
+# 2. stickProdId
+# 3. addrWlan
+# 4. netmWlan
+
+
+LSUSB=/usr/bin/lsusb
+scriptDir="/usr/local/ipcam"
+scriptBin=$scriptDir/bin
+tempDir=$scriptDir/tmp
+tempFile="$tempDir/`date +%H-%M`-stickstatus.tmp"
+varsFile=$scriptBin/vars
+
+defStickVendID=148f
+defStickProdID=3070
+ifWlan=wlan0
+wpaConf=/etc/wpa_supplicant.conf
+defAddrWlan=192.168.1.97
+defNetmWlan=255.255.255.0
+
+unset wlanStatus
+unset stickStatus
+
+# get WiFi stick Vendor and Product ID from `vars`
+stickVendID=`grep stickVendID $varsFile | awk -F'=' '{print $2}'`
+if [ "$stickVendID" == "" ]; then
+	stickVendID=$defStickVendID	
+fi
+stickProdID=`grep stickProdID $varsFile | awk -F'=' '{print $2}'`
+if [ "$stickProdID" == "" ]; then
+	stickProdID=$defStickProdID	
+fi
+
+# get USB WiFi stick status from lsusb (just the address assigned)
+# i.e. "Bus 001 Device 010": address is 10
+stickStatus=`$LSUSB -d $stickVendID:$stickProdID | awk '{print $4}'`
+
+if [ "$stickStatus" == "" ]; then
+	echo "[WiFi stick]: no USB WiFi found"
+else
+	# check whether there is already running WiFi stick up with IP address
+	ifconfig $ifWlan > $tempFile 2>&1
+	wlanExist=`cat $tempFile | grep UP | grep RUNNING | wc -l`
+	
+	if [ $wlanExist -eq 0 ]; then
+
+		# get IP config from `vars` file
+		addrWlan=`grep addrWlan $varsFile | awk -F'=' '{print $2}'`
+		if [ "$addrWlan" == "" ]; then
+			addrWlan=$defAddrWlan	
+		fi
+		netmWlan=`grep netmWlan $varsFile | awk -F'=' '{print $2}'`
+		if [ "$netmWlan" == "" ]; then
+			netmWlan=$defNetmWlan	
+		fi
+		
+		pkill wpa_supplicant
+		wpa_supplicant -B -i${ifWlan} -c${wpaConf} > /dev/null 2>&1
+		sleep 5
+		ifconfig $ifWlan > $tempFile 2>&1
+		wlanStatus=`cat $tempFile | head -1 | grep error | wc -l`
+		if [ $wlanStatus -eq 0 ]; then
+			ifconfig $ifWlan $addrWlan netmask $netmWlan up
+		else
+			echo "[WiFi stick]: ifconfig found no device"
+			exit 1
+		fi
+	
+	else
+		echo "[WiFi stick]: WiFi already running"
+	fi
+	rm $tempFile
+fi
+exit 0
+	

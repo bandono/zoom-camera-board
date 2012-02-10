@@ -1,0 +1,22 @@
+#!/bin/bash
+ntpdate_sync() {
+	ntpdate ntp.ubuntu.com
+}
+
+ntpdate_dummy() {
+	true
+}
+
+case "$1" in
+ 
+start)
+	ntpdate_sync
+	;;
+stop)
+	ntpdate_dummy
+	;;	
+*)
+	echo "Usage: $0 {start|stop}"
+	;;
+esac
+exit 0

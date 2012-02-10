@@ -1,0 +1,16 @@
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto eth0
+iface eth0 inet static
+	hwaddress ether 42:DE:3C:1A:1D:0A
+	address 192.168.1.98
+	netmask 255.255.255.0
+#	gateway 192.168.1.1
+# Example to keep MAC address between reboots
+#hwaddress ether DE:AD:BE:EF:CA:FE
+
+#auto ppp0
+#iface ppp0 inet ppp
+#        provider tsel_flash

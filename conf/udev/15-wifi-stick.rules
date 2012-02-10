@@ -1,0 +1,4 @@
+SUBSYSTEM=="usb",
+ATTRS{idProduct}=="2573",
+ATTRS{idVendor}=="148f",
+RUN+="/usr/local/ipcam/bin/conn-health"
