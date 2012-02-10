@@ -1,14 +1,16 @@
 #!/bin/bash
-# version: 3.0
+# version: 3.1
 # For use with the direct camera RS232 connection without additional control board 
 #
 # require root privilege
-# usage: sudo ./ptz-server <start | stop >
+# usage: sudo ./ptz-server <start | stop | check>
 #
 # 1. Read `vars` file inside $scriptBin (inside /usr/local/ipcam/bin)
 # 2. Set Visca serial port to what was found in the above step
 # 3. Stop the `ttyVisca` normally in use for system console 
-# 4. Start the `server.py` to listen `listePort` and use the Visca serial port `ttyVisca`
+# 4. Start the `server.py` to listen `listenPort` and use the Visca serial port `ttyVisca`
+# 5. Log necessary status to syslog logger
+# 6. If called by i.e. cron using `sudo ./ptz-server check`, it will restart server if `ttyVisca` is in `start` status
 
 scriptDir="/usr/local/ipcam"
 scriptBin=$scriptDir/bin
@@ -23,6 +25,8 @@ tty=`echo $ttyVisca | awk -F '/' '{print $3}'`
 close_console() {
 	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep start | wc -l`
 	if [ $serialStatus -gt 0 ]; then
+		echo "[server.py]: Serial port $tty Status is start/running. Stopping the port"
+		logger "Serial port $tty Status is start/running. Stopping the port" -t "[server.py]"
 		/sbin/stop $tty
 	fi
 }
@@ -30,7 +34,22 @@ close_console() {
 start_console() {
 	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep stop | wc -l`
 	if [ $serialStatus -gt 0 ]; then
+		echo "[server.py]: Serial port $tty Status is stop/waiting. Starting the port"
+		logger "Serial port $tty Status is stop/waiting. Starting the port" -t "[server.py]"	
 		/sbin/start $tty
+	fi
+}
+
+check_console() {
+	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep start | wc -l`
+	if [ $serialStatus -gt 0 ]; then
+		echo "[server.py]: Serial port $tty Status is start/running. Stopping the port"
+		logger "Serial port $tty Status is start/running. Stopping the port" -t "[server.py]"
+		/sbin/stop $tty
+		# restarting server
+		ptzsrv_down
+		sleep 3
+		ptzsrv_up
 	fi
 }
 
@@ -40,6 +59,7 @@ ptzsrv_up() {
 
 	if [ "$srvStatus" != ""  ]; then
 		echo "[server.py]: server.py is already running at PID $srvStatus"
+		logger "server.py is already running at PID $srvStatus" -t "[server.py]"
 	else
 		# start a new server.py
 		if [ -f $pidFile ]; then
@@ -48,6 +68,7 @@ ptzsrv_up() {
 		$scriptBin/server.py $listenPort $ttyVisca &
 		echo $! > $pidFile
 		echo "[server.py]: server.py is started"
+		logger "server.py is started" -t "[server.py]"
 	fi
 }
 
@@ -56,7 +77,9 @@ ptzsrv_down() {
 		pkill server.py
 	else
 		kill -9 `cat $pidFile`
-	fi	
+	fi
+	echo "[server.py]: server.py is stopped"
+	logger "server.py is stopped" -t "[server.py]"	
 }	
 
 case "$1" in
@@ -69,8 +92,11 @@ stop)
 	start_console
 	ptzsrv_down
 	;;
+check)
+	check_console
+	;;	
 *)
-	echo "Usage: $0 {start|stop}"
+	echo "Usage: $0 {start|stop|check}"
 	;;
 esac
 exit 0
