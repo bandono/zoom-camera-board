@@ -1,0 +1,10 @@
+ttyVisca=/dev/ttyO2
+defaultISP=tsel_flash
+VPNname=myvpn
+videoScale=0.35
+
+stickVendID=148f
+stickProdID=2573
+addrWlan=192.168.1.96
+netmWlan=255.255.255.0
+wlanGw=192.168.1.1
