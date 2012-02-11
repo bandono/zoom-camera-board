@@ -1,0 +1,9 @@
+# written by pptpsetup
+pty "pptp some-primary-address.com --nolaunchpppd"
+lock
+noauth
+nobsdcomp
+nodeflate
+name some-username
+remotename myvpn
+ipparam myvpn
