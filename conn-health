@@ -1,7 +1,7 @@
 #!/bin/bash
 # Requires root privilege as this script needs to put up/down
 # or restart network and/or pptp
-# version : 2.5
+# version : 2.6
 #
 # A lock file will be created as `/usr/local/ipcam/tmp/conn-health.lock`
 # if the script doesn't finished, this needs manual removal
@@ -105,12 +105,6 @@ else
 				# get new modem interface status after waiting 10 seconds
 				ifconfig $ifPpp > $tempFile 2>&1
 				pppStatus=`cat $tempFile | head -1 | grep error | wc -l`
-				# restart pptp-client after getting new status
-				#if any, if there isn't, make no noise about it
-				$scriptBin/ntpdate start	#update date via ntpdate
-				poff $VPNname > /dev/null 2>&1
-				sleep 4
-				pon $VPNname
 			else
 				echo "[conn-health]: AT command failed. Removing lock"
 				logger "AT command failed. Removing lock" -t "[conn-health]"
@@ -118,19 +112,27 @@ else
 				rm $lockFile
 				exit 1
 			fi	
-		done
+		done # successful 3G connection
 		rm $tempFile
 
-		sleep 5
-		# check vpn tunnel after 5 seconds (as connection attempt already done once within the above loop)
+		$scriptBin/ntpdate start	#update date via ntpdate
+		# restart pptp-client after getting new status
+		#if any, if there isn't, make no noise about it
+		poff $VPNname > /dev/null 2>&1
+		sleep 4
+		pon $VPNname		
 
+		sleep 5
+		# check vpn tunnel after 5 seconds (as connection attempt already done once after the above `while` loop)
 		# if connection can't be established in one more attempt
 		# try four times more before rebooting
 		ifconfig $ifVpn > $tempFile 2>&1
-		vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
+		# check vpnStatus with `UP` status instead of `error` condition from ifconfig because ppp1 (VPN tunnel)
+		# behaves differently from ppp0 (3G modem)
+		vpnStatus=`cat $tempFile | grep UP | head -1 | wc -l`
 		
 		vpnCounter=5
-		while [ $vpnCounter -gt 0 ] && [ $vpnStatus -gt 0 ]; do
+		while [ $vpnCounter -gt 0 ] && [ $vpnStatus -eq 0 ]; do
 			# try to stop VPN if any, if there isn't, make no noise about it
 			poff $VPNname > /dev/null 2>&1
 			sleep 4
@@ -138,7 +140,7 @@ else
 			
 			# update VPN status
 			ifconfig $ifVpn > $tempFile 2>&1
-			vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
+			vpnStatus=`cat $tempFile | grep UP | head -1 | wc -l`
 			# update counter (decrement)
 			(( vpnCounter-- ))
 			echo "[conn-health]: attempt to connect VPN : $vpnCounter"
@@ -148,8 +150,8 @@ else
 		
 		# the checking before reboot decision
 		ifconfig $ifVpn > $tempFile 2>&1
-		vpnStatus=`cat $tempFile | head -1 | grep error | wc -l`
-		if [ $vpnStatus -gt 0 ]; then		
+		vpnStatus=`cat $tempFile | grep UP | head -1 | wc -l`
+		if [ $vpnStatus -eq 0 ]; then		
 			# REBOOT
 			rm $tempFile
 			rm $lockFile
