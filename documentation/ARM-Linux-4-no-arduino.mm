@@ -1,6 +1,6 @@
 <map version="0.9.0">
 <!-- To view this file, download free mind mapping software FreeMind from http://freemind.sourceforge.net -->
-<node CREATED="1322971628166" ID="ID_1690451288" MODIFIED="1326174552144">
+<node BACKGROUND_COLOR="#15b2e8" CREATED="1322971628166" ID="ID_1690451288" MODIFIED="1329117829680">
 <richcontent TYPE="NODE"><html>
   <head>
     
@@ -17,6 +17,7 @@
     </p>
   </body>
 </html></richcontent>
+<edge COLOR="#1335e8"/>
 <node CREATED="1323787052626" HGAP="28" ID="ID_707826327" MODIFIED="1326255849238" POSITION="left" TEXT="vars" VSHIFT="-32">
 <node CREATED="1323404422822" HGAP="58" ID="ID_279507868" MODIFIED="1328693591618" STYLE="fork" VSHIFT="-52">
 <richcontent TYPE="NODE"><html>
@@ -60,7 +61,7 @@
 </node>
 </node>
 <node CREATED="1322971907201" ID="ID_98931464" MODIFIED="1323791649947" POSITION="left" TEXT="cvlc streaming RTSP">
-<node COLOR="#d30b0b" CREATED="1322971707718" FOLDED="true" HGAP="45" ID="ID_1143294102" MODIFIED="1328952557624" STYLE="bubble" TEXT="daemon" VSHIFT="-42">
+<node COLOR="#d30b0b" CREATED="1322971707718" FOLDED="true" HGAP="45" ID="ID_1143294102" MODIFIED="1329117159320" STYLE="bubble" TEXT="daemon" VSHIFT="-42">
 <font BOLD="true" NAME="SansSerif" SIZE="12"/>
 <node CREATED="1323404422822" HGAP="57" ID="ID_1641492787" MODIFIED="1323404708571" STYLE="fork" TEXT="cvlc -v ..." VSHIFT="13">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
@@ -68,7 +69,7 @@
 </node>
 <node CREATED="1322971932429" HGAP="43" ID="ID_925818954" MODIFIED="1322972315334" TEXT="persist-streaming" VSHIFT="1">
 <font ITALIC="true" NAME="SansSerif" SIZE="12"/>
-<node CREATED="1322971707718" HGAP="28" ID="ID_1821048883" MODIFIED="1328693769124" STYLE="bubble" TEXT="cron job" VSHIFT="15">
+<node BACKGROUND_COLOR="#15e81d" CREATED="1322971707718" HGAP="28" ID="ID_1821048883" MODIFIED="1329117137812" STYLE="bubble" TEXT="cron job" VSHIFT="15">
 <node CREATED="1323404422822" HGAP="57" ID="ID_1353123660" MODIFIED="1323744945103" STYLE="fork" TEXT="rtsp-encode" VSHIFT="9">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 <icon BUILTIN="full-3"/>
@@ -103,11 +104,11 @@
 <arrowlink DESTINATION="ID_707826327" ENDARROW="None" ENDINCLINATION="316;-344;" ID="Arrow_ID_1888913032" STARTARROW="Default" STARTINCLINATION="372;-343;"/>
 <node CREATED="1323690069220" HGAP="106" ID="ID_516118753" MODIFIED="1323690193109" TEXT="persist-server" VSHIFT="66">
 <font ITALIC="true" NAME="SansSerif" SIZE="12"/>
-<node CREATED="1322971707718" HGAP="87" ID="ID_1735429372" MODIFIED="1323690190421" STYLE="bubble" TEXT="cron job" VSHIFT="45">
+<node BACKGROUND_COLOR="#15e81d" CREATED="1322971707718" HGAP="87" ID="ID_1735429372" MODIFIED="1329117184985" STYLE="bubble" TEXT="cron job" VSHIFT="45">
 <node CREATED="1323404422822" HGAP="57" ID="ID_15692766" MODIFIED="1323740747754" STYLE="fork" TEXT="ptz-server" VSHIFT="9">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 <icon BUILTIN="full-5"/>
-<node CREATED="1323404422822" HGAP="57" ID="ID_1999756133" MODIFIED="1323690039846" STYLE="fork" TEXT="*/1 * * * * sleep 30; /usr/local/ipcam/bin/ptz-server start&#xa;*/1 * * * * /usr/local/ipcam/bin/ptz-server start" VSHIFT="13">
+<node CREATED="1323404422822" HGAP="57" ID="ID_1999756133" MODIFIED="1329200341561" STYLE="fork" TEXT="@reboot sleep 40; sudo /usr/local/ipcam/bin/ptz-server start&#xa;*/1 * * * * /usr/local/ipcam/bin/ptz-server check" VSHIFT="13">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 </node>
 </node>
@@ -122,41 +123,31 @@
 </node>
 </node>
 <node CREATED="1322971745128" HGAP="113" ID="ID_185900001" MODIFIED="1323410944000" TEXT="port 3789" VSHIFT="15"/>
-<node CREATED="1322971707718" HGAP="79" ID="ID_645138629" MODIFIED="1323745358357" STYLE="bubble" TEXT="init rc.d" VSHIFT="42">
-<node CREATED="1323410884564" HGAP="36" ID="ID_230052037" MODIFIED="1323745413677" STYLE="fork" VSHIFT="18">
+<node CREATED="1322971707718" HGAP="79" ID="ID_645138629" MODIFIED="1329117792477" STYLE="bubble" VSHIFT="42">
 <richcontent TYPE="NODE"><html>
   <head>
     
   </head>
   <body>
     <p>
-      /etc/rc0.d/K20ptz-server
-    </p>
-    <p>
-      /etc/rc1.d/K20ptz-server
-    </p>
-    <p>
-      /etc/rc2.d/S20ptz-server
-    </p>
-    <p>
-      /etc/rc3.d/S20ptz-server
-    </p>
-    <p>
-      /etc/rc4.d/S20ptz-server
-    </p>
-    <p>
-      /etc/rc5.d/S20ptz-server
-    </p>
-    <p>
-      /etc/rc6.d/K20ptz-server
+      <strike>init rc.d</strike>
     </p>
   </body>
 </html></richcontent>
+<icon BUILTIN="button_cancel"/>
+</node>
+</node>
+<node CREATED="1329200440491" ID="ID_586480959" MODIFIED="1329200456107" POSITION="left" TEXT="clean lock &amp; temp file">
+<node CREATED="1323404422822" HGAP="57" ID="ID_649105909" MODIFIED="1329200495996" STYLE="fork" TEXT="clean-lock-temp" VSHIFT="9">
+<font NAME="Courier 10 Pitch" SIZE="12"/>
+<icon BUILTIN="full-8"/>
+<node CREATED="1323404422822" HGAP="57" ID="ID_280628020" MODIFIED="1329200512345" STYLE="fork" TEXT="@reboot sudo /usr/local/ipcam/bin/clean-lock-temp" VSHIFT="13">
+<font NAME="Courier 10 Pitch" SIZE="12"/>
 </node>
 </node>
 </node>
 <node CREATED="1322971634474" HGAP="38" ID="ID_358361083" MODIFIED="1323791838276" POSITION="right" TEXT="detect-modem" VSHIFT="-24">
-<node CREATED="1322971728382" HGAP="118" ID="ID_1353514456" MODIFIED="1323404691459" STYLE="bubble" TEXT="init rc.d" VSHIFT="-9">
+<node BACKGROUND_COLOR="#e8151d" CREATED="1322971728382" HGAP="118" ID="ID_1353514456" MODIFIED="1329117746251" STYLE="bubble" TEXT="init rc.d" VSHIFT="-9">
 <node CREATED="1323404422822" HGAP="74" ID="ID_1863777603" MODIFIED="1323684417316" STYLE="fork" TEXT="which-tty" VSHIFT="9">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 <icon BUILTIN="full-1"/>
@@ -225,19 +216,18 @@
 </node>
 </node>
 </node>
-<node CREATED="1322971707718" HGAP="50" ID="ID_505451057" MODIFIED="1328695555838" STYLE="bubble" TEXT="cron job" VSHIFT="30">
+<node BACKGROUND_COLOR="#15e81d" CREATED="1322971707718" HGAP="50" ID="ID_505451057" MODIFIED="1329117145456" STYLE="bubble" TEXT="cron job" VSHIFT="30">
 <node CREATED="1323404422822" HGAP="57" ID="ID_1442972506" MODIFIED="1328597882501" STYLE="fork" TEXT="conn-health" VSHIFT="9">
-<arrowlink DESTINATION="ID_509272192" ENDARROW="None" ENDINCLINATION="-196;-38;" ID="Arrow_ID_549126626" STARTARROW="Default" STARTINCLINATION="67;88;"/>
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 <icon BUILTIN="full-7"/>
-<node CREATED="1323404422822" HGAP="57" ID="ID_648359457" MODIFIED="1326268681810" STYLE="fork" TEXT="@reboot sudo /usr/local/ipcam/bin/conn-health&#xa;*/1 * * * * sleep 30; sudo /usr/local/ipcam/bin/conn-health&#xa;*/1 * * * * sudo /usr/local/ipcam/bin/conn-health" VSHIFT="13">
+<node CREATED="1323404422822" HGAP="57" ID="ID_648359457" MODIFIED="1329200406377" STYLE="fork" TEXT="@reboot sleep 10; sudo /usr/local/ipcam/bin/conn-health&#xa;*/1 * * * * sudo /usr/local/ipcam/bin/conn-health" VSHIFT="13">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
 </node>
 </node>
 </node>
 </node>
 <node CREATED="1322971848570" HGAP="64" ID="ID_488135162" MODIFIED="1326174479942" POSITION="right" TEXT="pptp client" VSHIFT="16">
-<node CREATED="1322971707718" HGAP="83" ID="ID_1536300546" MODIFIED="1326272000614" STYLE="bubble" TEXT="cron job" VSHIFT="-40">
+<node BACKGROUND_COLOR="#15e81d" CREATED="1322971707718" HGAP="83" ID="ID_1536300546" MODIFIED="1329117137813" STYLE="bubble" TEXT="cron job" VSHIFT="-40">
 <arrowlink DESTINATION="ID_1442972506" ENDARROW="Default" ENDINCLINATION="0;16;" ID="Arrow_ID_429559303" STARTARROW="None" STARTINCLINATION="102;25;"/>
 </node>
 <node CREATED="1322972105997" HGAP="115" ID="ID_552676491" MODIFIED="1323741253298" TEXT="persist VPN" VSHIFT="7">
@@ -258,15 +248,20 @@
 </html></richcontent>
 <icon BUILTIN="button_cancel"/>
 </node>
-<node CREATED="1322971707718" HGAP="162" ID="ID_1956391511" MODIFIED="1328952604135" STYLE="bubble" TEXT="udev rules" VSHIFT="47">
-<node CREATED="1323404422822" HGAP="74" ID="ID_1757918377" MODIFIED="1328597647253" STYLE="fork" TEXT="/etc/udev/rules.d/15-wifi-stick.rules" VSHIFT="9">
-<font NAME="Courier 10 Pitch" SIZE="12"/>
-<node CREATED="1323404422822" HGAP="57" ID="ID_509272192" MODIFIED="1328597882502" STYLE="fork" TEXT="SUBSYSTEM==&quot;usb&quot;,&#xa;ATTRS{idProduct}==&quot;2573&quot;,&#xa;ATTRS{idVendor}==&quot;148f&quot;,&#xa;RUN+=&quot;/usr/local/ipcam/bin/conn-health&quot;" VSHIFT="13">
-<font NAME="Courier 10 Pitch" SIZE="12"/>
+<node CREATED="1322971707718" HGAP="162" ID="ID_1956391511" MODIFIED="1329117712656" STYLE="bubble" VSHIFT="47">
+<richcontent TYPE="NODE"><html>
+  <head>
+    
+  </head>
+  <body>
+    <p>
+      <strike>udev rules</strike>
+    </p>
+  </body>
+</html></richcontent>
+<icon BUILTIN="button_cancel"/>
 </node>
-</node>
-</node>
-<node CREATED="1322971707718" HGAP="145" ID="ID_4903535" MODIFIED="1328952606430" STYLE="bubble" TEXT="cron job" VSHIFT="33">
+<node BACKGROUND_COLOR="#15e81d" CREATED="1322971707718" HGAP="145" ID="ID_4903535" MODIFIED="1329117137812" STYLE="bubble" TEXT="cron job" VSHIFT="33">
 <arrowlink DESTINATION="ID_1442972506" ENDARROW="Default" ENDINCLINATION="0;16;" ID="Arrow_ID_14007616" STARTARROW="None" STARTINCLINATION="102;25;"/>
 <node CREATED="1323404422822" HGAP="57" ID="ID_409806378" MODIFIED="1328952632927" STYLE="fork" TEXT="lsusb:&#xa;ID 148f:2573 ..." VSHIFT="13">
 <font NAME="Courier 10 Pitch" SIZE="12"/>
