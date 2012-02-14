@@ -20,4 +20,13 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 # 
 # m h  dom mon dow   command
-@reboot sudo /usr/local/ipcam/bin/conn-health
+@reboot sudo /usr/local/ipcam/bin/clean-lock-temp
+@reboot sleep 10; sudo /usr/local/ipcam/bin/conn-health
+@reboot sleep 30; /usr/local/ipcam/bin/rtsp-encode
+@reboot sleep 40; sudo /usr/local/ipcam/bin/ptz-server start
+
+*/1 * * * * sleep 30; /usr/local/ipcam/bin/rtsp-encode
+*/1 * * * * /usr/local/ipcam/bin/rtsp-encode
+
+*/1 * * * * sudo /usr/local/ipcam/bin/conn-health
+*/1 * * * * sudo /usr/local/ipcam/bin/ptz-server check
