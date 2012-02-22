@@ -1,4 +1,4 @@
-ttyVisca=/dev/ttyO2
+ttyArduino=/dev/ttyUSB0
 defaultISP=tsel_flash
 VPNname=myvpn
 videoScale=0.35

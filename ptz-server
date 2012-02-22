@@ -1,16 +1,15 @@
 #!/bin/bash
-# version: 3.1
-# For use with the direct camera RS232 connection without additional control board 
+# version: 2.1
+# For use with additional Arduino control board 
 #
 # require root privilege
-# usage: sudo ./ptz-server <start | stop | check>
+# usage: sudo ./ptz-server <start | stop >
 #
 # 1. Read `vars` file inside $scriptBin (inside /usr/local/ipcam/bin)
-# 2. Set Visca serial port to what was found in the above step
-# 3. Stop the `ttyVisca` normally in use for system console 
-# 4. Start the `server.py` to listen `listenPort` and use the Visca serial port `ttyVisca`
-# 5. Log necessary status to syslog logger
-# 6. If called by i.e. cron using `sudo ./ptz-server check`, it will restart server if `ttyVisca` is in `start` status
+# 2. Set serial port to what was found in the above step
+
+
+# 3. Log necessary status to syslog logger
 
 scriptDir="/usr/local/ipcam"
 scriptBin=$scriptDir/bin
@@ -19,39 +18,8 @@ varsFile=$scriptBin/vars
 pidFile="$tempDir/run-ptzserver.pid"
 
 listenPort=3789
-ttyVisca=`grep ttyVisca $varsFile | awk -F'=' '{print $2}'`
-tty=`echo $ttyVisca | awk -F '/' '{print $3}'`
-
-close_console() {
-	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep start | wc -l`
-	if [ $serialStatus -gt 0 ]; then
-		echo "[server.py]: Serial port $tty Status is start/running. Stopping the port"
-		logger "Serial port $tty Status is start/running. Stopping the port" -t "[server.py]"
-		/sbin/stop $tty
-	fi
-}
-
-start_console() {
-	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep stop | wc -l`
-	if [ $serialStatus -gt 0 ]; then
-		echo "[server.py]: Serial port $tty Status is stop/waiting. Starting the port"
-		logger "Serial port $tty Status is stop/waiting. Starting the port" -t "[server.py]"	
-		/sbin/start $tty
-	fi
-}
-
-check_console() {
-	serialStatus=`/sbin/status $tty | awk '{print $2}' | grep start | wc -l`
-	if [ $serialStatus -gt 0 ]; then
-		echo "[server.py]: Serial port $tty Status is start/running. Stopping the port"
-		logger "Serial port $tty Status is start/running. Stopping the port" -t "[server.py]"
-		/sbin/stop $tty
-		# restarting server
-		ptzsrv_down
-		sleep 3
-		ptzsrv_up
-	fi
-}
+ttyArduino=`grep ttyArduino $varsFile | awk -F'=' '{print $2}'`
+tty=`echo $ttyArduino | awk -F '/' '{print $3}'`
 
 ptzsrv_up() {
 	# check existing server.py whether it is already running
@@ -65,7 +33,7 @@ ptzsrv_up() {
 		if [ -f $pidFile ]; then
 			rm $pidFile
 		fi	
-		$scriptBin/server.py $listenPort $ttyVisca &
+		$scriptBin/server.py $listenPort $ttyArduino &
 		echo $! > $pidFile
 		echo "[server.py]: server.py is started"
 		logger "server.py is started" -t "[server.py]"
@@ -85,18 +53,13 @@ ptzsrv_down() {
 case "$1" in
  
 start)
-	close_console
 	ptzsrv_up
 	;;
 stop)
-	start_console
 	ptzsrv_down
-	;;
-check)
-	check_console
 	;;	
 *)
-	echo "Usage: $0 {start|stop|check}"
+	echo "Usage: $0 {start|stop}"
 	;;
 esac
 exit 0

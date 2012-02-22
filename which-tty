@@ -1,15 +1,17 @@
 #!/bin/bash
-# version: 3.1
-# For use with the direct camera RS232 connection without additional control board 
-# 1. Read `vars` file inside $scriptBin (inside /usr/local/ipcam/bin)
-# 2. Check modem by calling `check_usb_modem.py` script
-# 3. Modify /etc/ppp/peers/$modemISP according to the above checking of /dev/ttyUSB*
+# version: 2.0
+#
+# which_arduino part is created to cope with USB usage for additional arduino board
+#
+# 1. Read "vars" file inside $scriptBin (inside /usr/local/ipcam/bin)
+# 2. Modify "vars" content according to checking
+# 3. Modify /etc/ppp/peers/$modemISP according to checking of /dev/ttyUSB* 
+#
+# it calls `check_usb_modem.py` script
 #
 # run under root privilege
 # it has start/stop where the stop is dummy to be placed in various level of rc*.d init
-# 4. log necessary info
-# `all_down` is a dummy function doing nothing just for the script to be able to be called:
-# `which-tty stop`
+# 4. via start/stop at startup it also delete `conn-health` lock file and `.tmp` files
 
 
 scriptDir="/usr/local/ipcam"
@@ -30,7 +32,7 @@ modemISP=$defaultISP
 which_usb() {
 	ls  /dev/ttyUSB* | tr '\s' '\n' > $tempFile
 	
-	# check each ttyUSB? found in file by calling `check_usb_modem.py`
+	# check each ttyUSB? found in file
 	for ttyname in `cat $tempFile`
 	do
 		ttyStatus=`/usr/bin/python $ATchecker $ttyname | grep "OK"`
@@ -46,12 +48,10 @@ modify_ISPconfig() {
 	pppConf="$pppDir/$modemISP"
 	if [ ! -f $pppConf ]; then
 		echo "[which-tty-modem]: modem ISP config not found"
-		logger "modem ISP config not found" -t "[which-tty-modem]"
 	else
 		ttyInd=`echo -n $1 | cut -c12`
 		/usr/bin/perl -pi -e "s/\/dev\/ttyUSB.*/\/dev\/ttyUSB${ttyInd}/g" $pppConf
-		echo "[which-tty-modem]: modified USB modem to $1"
-		logger "modified USB modem to $1" -t "[which-tty-modem]"		 
+		echo "[which-tty-modem]: modified USB modem to $1" 
 	fi
 } 
 
@@ -59,14 +59,54 @@ whichmodem_up() {
 	which_usb $ttyUSB
 	if [ "$ttyUSB" != "" ]; then
 		modify_ISPconfig $ttyUSB
+		which_arduino $ttyUSB
 	else
 		echo "[which-tty-modem]: No ttyUSB* answer ATZ modem command"
-		logger "No ttyUSB* answer ATZ modem command" -t "[which-tty-modem]"
 	fi	
 }
 
+which_arduino() {
+	if [ "$1" != "" ]; then
+		ttyInd=`echo -n $1 | cut -c12`
+		
+		
+		# modem found in ttyUSB0 will use also ttyUSB1 & 2 etc.
+		# assuming no other ttyUSB rather than 1) modem 2) arduino
+		# modem found in other than ttyUSB0 means that arduino is using that	
+		if [ $ttyInd -gt 0 ]; then
+			ttyArduinoInd=0
+			# replace vars file
+			/usr/bin/perl -pi -e "s/ttyArduino\=.*/ttyArduino\=\/dev\/ttyUSB${ttyArduinoInd}/g" $varsFile
+			echo "[arduino - port]: Arduino port in $varsFile is set to /dev/ttyUSB0"
+		else
+			# some Arduino model use ttyACM* (0 or 1) instead of any ttyUSB*
+			# check for its existance		
+			if [ -c /dev/ttyACM0 ]; then
+				# replace vars file
+				/usr/bin/perl -pi -e "s/ttyArduino\=.*/ttyArduino\=\/dev\/ttyACM0/g" $varsFile
+				echo "[arduino - port]: Arduino port in $varsFile is set to /dev/ttyACM0"
+			elif [ -c /dev/ttyACM1 ]; then
+				# replace vars file
+				/usr/bin/perl -pi -e "s/ttyArduino\=.*/ttyArduino\=\/dev\/ttyACM1/g" $varsFile			
+				echo "[arduino - port]: Arduino port in $varsFile is set to /dev/ttyACM1"
+			else
+				# ttyUSB3 must be arduino (above assumption)
+				# replace vars file
+				/usr/bin/perl -pi -e "s/ttyArduino\=.*/ttyArduino\=\/dev\/ttyUSB3/g" $varsFile
+				echo "[arduino - port]: Arduino port in $varsFile is set to /dev/ttyUSB3"
+			fi
+		fi
+	else
+		echo "[arduino - port]: Nothing changed with $varsFile for Arduino USB port"
+	fi
+}
+
 all_down() {
-	true
+	# delete `conn-health` lock file if found
+	if [ -f $lockFile ]; then	
+		rm -f $lockFile
+	fi
+	rm -f $tempDir/*.tmp
 }
 
 case "$1" in
@@ -77,6 +117,11 @@ start)
 	else
 		modemISP=$defaultISP
 	fi
+	# delete `conn-health` lock file if found
+	if [ -f $lockFile ]; then	
+		rm -f $lockFile
+	fi
+	rm -f $tempDir/*.tmp
 	whichmodem_up
 	;;
 stop)
