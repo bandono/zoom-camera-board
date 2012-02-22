@@ -1,7 +1,7 @@
 #!/bin/bash
 # Requires root privilege as this script needs to put up/down
 # or restart network and/or pptp
-# version : 2.7
+# version : 2.8
 #
 # A lock file will be created as `/usr/local/ipcam/tmp/conn-health.lock`
 # if the script doesn't finished, this needs manual removal
@@ -174,8 +174,6 @@ else
 		#--------------------		
 		rm $tempFile		
 	else
-		# try to stop VPN if any, if there isn't, make no noise about it
-		poff $VPNname > /dev/null 2>&1
 		
 		# read WLAN gateway config from `vars`
 		wlanGw=`grep wlanGw $varsFile | awk -F'=' '{print $2}'`
@@ -191,9 +189,13 @@ else
 		defGw=`route | grep default | awk '{print $8}'`
 		
 		if [ "$defGw" == "ppp0" ]; then
+			# try to stop VPN if any, if there isn't, make no noise about it
+			poff $VPNname > /dev/null 2>&1
 			route del default gw 0.0.0.0 dev ppp0
 			wifiRoute
 		elif [ "$defGw" == "eth0" ]; then
+			# try to stop VPN if any, if there isn't, make no noise about it
+			poff $VPNname > /dev/null 2>&1		
 			route del default gw 0.0.0.0 dev eth0
 			wifiRoute
 		elif [ "$defGw" == "$ifWlan" ]; then
