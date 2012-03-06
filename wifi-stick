@@ -2,6 +2,7 @@
 # Requires root privilege as this script needs to put up/down
 # wpa_supplicant and ifconfig
 #
+# version:	2.0
 # It will use `lsusb` to check for WiFi (wireless-LAN) stick
 #
 # will try to read `vars` for this settings:
@@ -9,7 +10,8 @@
 # 2. stickProdId
 # 3. addrWlan
 # 4. netmWlan
-
+#
+# The Wifi Stick TP-Link TL-WN321G is to used `nl80211` driver in the wpa_supplicant
 
 LSUSB=/usr/bin/lsusb
 scriptDir="/usr/local/ipcam"
@@ -20,6 +22,7 @@ varsFile=$scriptBin/vars
 
 defStickVendID=148f
 defStickProdID=3070
+defDriver=nl80211
 ifWlan=wlan0
 wpaConf=/etc/wpa_supplicant.conf
 defAddrWlan=192.168.1.97
@@ -62,7 +65,7 @@ else
 		fi
 		
 		pkill wpa_supplicant
-		wpa_supplicant -B -i${ifWlan} -c${wpaConf} > /dev/null 2>&1
+		wpa_supplicant -B -D${defDriver} -i${ifWlan} -c${wpaConf} > /dev/null 2>&1
 		sleep 5
 		ifconfig $ifWlan > $tempFile 2>&1
 		wlanStatus=`cat $tempFile | head -1 | grep error | wc -l`
